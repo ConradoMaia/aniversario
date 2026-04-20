@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg-soft: #fff6ef;
   --bg-blush: #ffe3ea;
   --bg-rose: #f8bfd0;
@@ -270,6 +270,67 @@ body.celebration-mode::before {
   margin: 0;
   font-size: 1.04rem;
   line-height: 1.8;
+}
+
+.photo-mural {
+  margin-top: 22px;
+  padding: 22px;
+  border-radius: 24px;
+  border: 1px solid rgba(139, 33, 67, 0.08);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.mural-header h3 {
+  margin: 0 0 14px;
+  font-size: 1.35rem;
+}
+
+.photo-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.photo-card {
+  margin: 0;
+  border-radius: 22px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(139, 33, 67, 0.08);
+  box-shadow: 0 16px 32px rgba(128, 30, 62, 0.08);
+}
+
+.photo-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.field-help {
+  margin: -4px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.admin-photo-card {
+  position: relative;
+}
+
+.remove-photo-button {
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-top: 1px solid rgba(139, 33, 67, 0.08);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--accent-dark);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.remove-photo-button:hover {
+  background: rgba(255, 241, 246, 0.96);
 }
 
 .photo-frame {

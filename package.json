@@ -1,8 +1,14 @@
-﻿{
+{
   "name": "aniversario-surpresa",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.3.3"
   }
 }

@@ -1,4 +1,4 @@
-﻿class BirthdayRouletteApp {
+class BirthdayRouletteApp {
   constructor() {
     this.canvas = document.getElementById("wheelCanvas");
     this.spinButton = document.getElementById("spinButton");
@@ -20,7 +20,7 @@
     this.content = {
       message:
         "Feliz aniversario, meu amor. Que o seu novo ciclo venha leve, divertido e cheio de coisas bonitas.",
-      imageDataUrls: []
+      imageUrls: []
     };
 
     this.segments = [
@@ -57,7 +57,7 @@
   spawnFloatingScene() {
     this.spawnFloatingGroup({
       count: 14,
-      text: "❤",
+      text: "\u2764",
       className: "float-heart",
       sizeMin: 18,
       sizeRange: 26,
@@ -70,7 +70,7 @@
 
     this.spawnFloatingGroup({
       count: 6,
-      text: "🌻",
+      text: "\uD83C\uDF3B",
       className: "float-sunflower",
       sizeMin: 22,
       sizeRange: 20,
@@ -83,7 +83,7 @@
 
     this.spawnFloatingGroup({
       count: 4,
-      text: "🐕",
+      text: "\uD83D\uDC15",
       className: "float-dachshund",
       sizeMin: 26,
       sizeRange: 16,
@@ -123,7 +123,7 @@
       const payload = await response.json();
       this.content = {
         ...payload,
-        imageDataUrls: this.normalizeImageDataUrls(payload)
+        imageUrls: this.normalizeImageUrls(payload)
       };
     } catch (error) {
       this.helperText.textContent =
@@ -131,7 +131,11 @@
     }
   }
 
-  normalizeImageDataUrls(content) {
+  normalizeImageUrls(content) {
+    if (Array.isArray(content.imageUrls)) {
+      return content.imageUrls.filter((item) => typeof item === "string" && item.trim());
+    }
+
     if (Array.isArray(content.imageDataUrls)) {
       return content.imageDataUrls.filter((item) => typeof item === "string" && item.trim());
     }
@@ -362,23 +366,23 @@
 
   updatePrizeContent() {
     this.birthdayMessage.innerHTML = this.formatText(this.content.message || "");
-    this.renderPhotoGallery(this.normalizeImageDataUrls(this.content));
+    this.renderPhotoGallery(this.normalizeImageUrls(this.content));
   }
 
-  renderPhotoGallery(imageDataUrls) {
+  renderPhotoGallery(imageUrls) {
     this.photoGallery.innerHTML = "";
 
-    if (!imageDataUrls.length) {
+    if (!imageUrls.length) {
       this.photoMural.classList.add("hidden");
       return;
     }
 
-    imageDataUrls.forEach((imageDataUrl, index) => {
+    imageUrls.forEach((imageUrl, index) => {
       const card = document.createElement("figure");
       card.className = "photo-card";
 
       const image = document.createElement("img");
-      image.src = imageDataUrl;
+      image.src = imageUrl;
       image.alt = `Foto ${index + 1} da surpresa`;
 
       card.appendChild(image);

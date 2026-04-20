@@ -1,0 +1,21 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/site",
+      "destination": "/"
+    },
+    {
+      "source": "/site/",
+      "destination": "/"
+    },
+    {
+      "source": "/site/admin",
+      "destination": "/admin"
+    },
+    {
+      "source": "/site/admin/",
+      "destination": "/admin"
+    }
+  ]
+}

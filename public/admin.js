@@ -1,4 +1,6 @@
-﻿class SurpriseAdminPage {
+import { upload } from "https://esm.sh/@vercel/blob@2.3.3/client?bundle";
+
+class SurpriseAdminPage {
   constructor() {
     this.form = document.getElementById("adminForm");
     this.messageInput = document.getElementById("messageInput");
@@ -12,7 +14,9 @@
     this.heartsContainer = document.querySelector(".floating-hearts");
 
     this.maxImageCount = 8;
-    this.imageDataUrls = [];
+    this.imageUrls = [];
+    this.storageMode = "local";
+    this.isUploading = false;
 
     this.init();
   }
@@ -35,7 +39,7 @@
   spawnFloatingScene() {
     this.spawnFloatingGroup({
       count: 10,
-      text: "❤",
+      text: "\u2764",
       className: "float-heart",
       sizeMin: 18,
       sizeRange: 18,
@@ -48,7 +52,7 @@
 
     this.spawnFloatingGroup({
       count: 4,
-      text: "🌻",
+      text: "\uD83C\uDF3B",
       className: "float-sunflower",
       sizeMin: 20,
       sizeRange: 16,
@@ -61,7 +65,7 @@
 
     this.spawnFloatingGroup({
       count: 2,
-      text: "🐕",
+      text: "\uD83D\uDC15",
       className: "float-dachshund",
       sizeMin: 24,
       sizeRange: 12,
@@ -90,7 +94,11 @@
     }
   }
 
-  normalizeImageDataUrls(content) {
+  normalizeImageUrls(content) {
+    if (Array.isArray(content.imageUrls)) {
+      return content.imageUrls.filter((item) => typeof item === "string" && item.trim());
+    }
+
     if (Array.isArray(content.imageDataUrls)) {
       return content.imageDataUrls.filter((item) => typeof item === "string" && item.trim());
     }
@@ -111,12 +119,25 @@
       }
 
       const content = await response.json();
+      this.storageMode = content.storageMode || "local";
       this.messageInput.value = content.message || "";
-      this.imageDataUrls = this.normalizeImageDataUrls(content);
-      this.setStatus("Conteudo carregado. Edite o que quiser e salve.");
+      this.imageUrls = this.normalizeImageUrls(content);
+      this.setStatus(this.getLoadedStatus(), this.storageMode === "unconfigured");
     } catch (error) {
       this.setStatus(error.message, true);
     }
+  }
+
+  getLoadedStatus() {
+    if (this.storageMode === "blob") {
+      return "Conteudo carregado. Upload direto da Vercel Blob ativo para fotos e mural.";
+    }
+
+    if (this.storageMode === "unconfigured") {
+      return "Projeto aberto sem BLOB_READ_WRITE_TOKEN. O admin nao vai conseguir salvar na Vercel.";
+    }
+
+    return "Conteudo carregado. Modo local ativo para texto e fotos.";
   }
 
   async handleImageSelection(event) {
@@ -126,29 +147,113 @@
       return;
     }
 
-    if (this.imageDataUrls.length + files.length > this.maxImageCount) {
+    if (this.isUploading) {
+      this.imageInput.value = "";
+      return;
+    }
+
+    if (this.imageUrls.length + files.length > this.maxImageCount) {
       this.setStatus(`Voce pode manter no maximo ${this.maxImageCount} fotos no mural.`, true);
       this.imageInput.value = "";
       return;
     }
 
-    const oversizedFile = files.find((file) => file.size > 5 * 1024 * 1024);
+    const oversizedFile = files.find((file) => file.size > 12 * 1024 * 1024);
 
     if (oversizedFile) {
-      this.setStatus(`A foto ${oversizedFile.name} passou de 5 MB.`, true);
+      this.setStatus(`A foto ${oversizedFile.name} passou de 12 MB.`, true);
       this.imageInput.value = "";
       return;
     }
 
     try {
-      const dataUrls = await Promise.all(files.map((file) => this.readFileAsDataUrl(file)));
-      this.imageDataUrls = [...this.imageDataUrls, ...dataUrls];
+      if (this.storageMode === "blob") {
+        await this.uploadFilesToBlob(files);
+      } else {
+        const dataUrls = await Promise.all(files.map((file) => this.readFileAsDataUrl(file)));
+        this.imageUrls = [...this.imageUrls, ...dataUrls];
+        this.setStatus(`${files.length} foto(s) adicionada(s) ao preview. Falta salvar.`);
+      }
+
       this.imageInput.value = "";
       this.updatePreview();
-      this.setStatus(`${files.length} foto(s) adicionada(s) ao preview. Falta salvar.`);
     } catch (error) {
-      this.setStatus("Nao foi possivel ler uma das imagens.", true);
+      this.setStatus(error.message || "Nao foi possivel preparar uma das imagens.", true);
+      this.imageInput.value = "";
     }
+  }
+
+  async uploadFilesToBlob(files) {
+    this.isUploading = true;
+    this.imageInput.disabled = true;
+    this.saveButton.disabled = true;
+    this.clearImageButton.disabled = true;
+
+    try {
+      const uploadedUrls = [];
+
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        this.setStatus(`Enviando foto ${index + 1} de ${files.length} para a Vercel Blob...`);
+
+        const result = await upload(this.createUploadPath(file), file, {
+          access: "public",
+          handleUploadUrl: "/api/upload",
+          multipart: file.size > 4 * 1024 * 1024,
+          contentType: file.type || undefined
+        });
+
+        uploadedUrls.push(result.url);
+      }
+
+      this.imageUrls = [...this.imageUrls, ...uploadedUrls];
+      this.setStatus(`${files.length} foto(s) enviada(s) para a Vercel Blob. Falta salvar o mural.`);
+    } finally {
+      this.isUploading = false;
+      this.imageInput.disabled = false;
+      this.saveButton.disabled = false;
+      this.clearImageButton.disabled = false;
+    }
+  }
+
+  createUploadPath(file) {
+    const extension = this.getFileExtension(file.name, file.type);
+    const safeBase = this.slugify(file.name.replace(/\.[a-z0-9]+$/i, "")) || "foto";
+    const randomSuffix = Math.random().toString(36).slice(2, 8);
+    const timestamp = Date.now();
+    return `aniversario/photos/${timestamp}-${randomSuffix}-${safeBase}${extension}`;
+  }
+
+  getFileExtension(fileName, fileType) {
+    const extensionMatch = fileName.toLowerCase().match(/\.(png|jpe?g|webp|gif)$/i);
+
+    if (extensionMatch) {
+      return extensionMatch[0].replace(".jpeg", ".jpg");
+    }
+
+    if (fileType === "image/png") {
+      return ".png";
+    }
+
+    if (fileType === "image/webp") {
+      return ".webp";
+    }
+
+    if (fileType === "image/gif") {
+      return ".gif";
+    }
+
+    return ".jpg";
+  }
+
+  slugify(value) {
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 42);
   }
 
   handleGalleryClick(event) {
@@ -164,13 +269,13 @@
       return;
     }
 
-    this.imageDataUrls = this.imageDataUrls.filter((_, cursor) => cursor !== index);
+    this.imageUrls = this.imageUrls.filter((_, cursor) => cursor !== index);
     this.updatePreview();
     this.setStatus("Foto removida do preview. Salve para aplicar.");
   }
 
   clearImages() {
-    this.imageDataUrls = [];
+    this.imageUrls = [];
     this.imageInput.value = "";
     this.updatePreview();
     this.setStatus("Todas as fotos foram removidas do preview. Salve para aplicar.");
@@ -200,7 +305,7 @@
         },
         body: JSON.stringify({
           message: this.messageInput.value,
-          imageDataUrls: this.imageDataUrls
+          imageUrls: this.imageUrls
         })
       });
 
@@ -210,8 +315,9 @@
         throw new Error(payload.error || "Nao foi possivel salvar.");
       }
 
+      this.storageMode = payload.storageMode || this.storageMode;
       this.messageInput.value = payload.message || "";
-      this.imageDataUrls = this.normalizeImageDataUrls(payload);
+      this.imageUrls = this.normalizeImageUrls(payload);
       this.updatePreview();
       this.setStatus("Surpresa salva com sucesso.");
     } catch (error) {
@@ -234,17 +340,17 @@
   renderPreviewGallery() {
     this.previewGallery.innerHTML = "";
 
-    if (!this.imageDataUrls.length) {
+    if (!this.imageUrls.length) {
       this.previewMural.classList.add("hidden");
       return;
     }
 
-    this.imageDataUrls.forEach((imageDataUrl, index) => {
+    this.imageUrls.forEach((imageUrl, index) => {
       const card = document.createElement("figure");
       card.className = "photo-card admin-photo-card";
 
       const image = document.createElement("img");
-      image.src = imageDataUrl;
+      image.src = imageUrl;
       image.alt = `Preview da foto ${index + 1}`;
 
       const removeButton = document.createElement("button");
