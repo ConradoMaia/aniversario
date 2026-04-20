@@ -1,0 +1,67 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin | Roleta de Aniversario</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="admin-page">
+    <div class="floating-hearts" aria-hidden="true"></div>
+
+    <main class="page-shell admin-shell">
+      <section class="hero-card admin-card">
+        <p class="eyebrow">Painel rapido</p>
+        <h1>Editar a surpresa</h1>
+        <p class="lead">
+          Atualize a mensagem final e a foto pelo celular, salve e depois abra a surpresa.
+        </p>
+
+        <form id="adminForm" class="admin-form">
+          <label class="field-label" for="messageInput">Mensagem de feliz aniversario</label>
+          <textarea
+            id="messageInput"
+            rows="8"
+            maxlength="5000"
+            placeholder="Escreva aqui a mensagem que vai aparecer no final."
+          ></textarea>
+
+          <label class="field-label" for="imageInput">Foto da surpresa</label>
+          <input
+            id="imageInput"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+          />
+
+          <div class="admin-actions">
+            <button id="saveButton" class="primary-button" type="submit">Salvar surpresa</button>
+            <button id="clearImageButton" class="ghost-button" type="button">Remover foto</button>
+          </div>
+
+          <p id="statusText" class="status-text">Carregando conteudo atual...</p>
+        </form>
+      </section>
+
+      <section class="story-card preview-card">
+        <span class="pill">Preview</span>
+        <h2>Como vai aparecer</h2>
+
+        <div class="message-panel">
+          <h3>Mensagem</h3>
+          <p id="previewMessage"></p>
+        </div>
+
+        <figure id="previewFrame" class="photo-frame hidden">
+          <img id="previewPhoto" alt="Preview da foto da surpresa" />
+        </figure>
+
+        <div class="admin-links">
+          <a class="secondary-link" href="/">Abrir surpresa</a>
+          <a class="secondary-link" href="/site/admin">Testar rota /site/admin</a>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/admin.js"></script>
+  </body>
+</html>

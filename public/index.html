@@ -1,0 +1,75 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Roleta de Aniversario</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="romantic-page">
+    <div class="floating-hearts" aria-hidden="true"></div>
+
+    <main class="page-shell">
+      <section class="hero-card">
+        <div class="hero-copy">
+          <p class="eyebrow">Surpresa de aniversario</p>
+          <h1>Gire a roleta de aniversario</h1>
+          <p class="lead">
+            Hoje vale tudo: casa nova, carro novo, viagem para a Europa, um milhao de reais e uma dose calculada de suspense.
+          </p>
+        </div>
+
+        <div class="wheel-card">
+          <div class="wheel-stage">
+            <div class="wheel-pointer"></div>
+            <canvas id="wheelCanvas" aria-label="Roleta de aniversario"></canvas>
+          </div>
+
+          <button id="spinButton" class="primary-button" type="button">Girar a roleta</button>
+          <p id="helperText" class="helper-text">
+            Dica: a roleta de aniversario parece estar especialmente dramatica hoje.
+          </p>
+        </div>
+      </section>
+
+      <section id="prizeCard" class="story-card hidden">
+        <span class="pill">Premio real</span>
+        <h2>Seu presente verdadeiro</h2>
+        <p class="prize-highlight">
+          Um passeio na Floricultura da Sharlau e duas plantas a escolha.
+        </p>
+
+        <div class="message-panel">
+          <h3>Feliz aniversario</h3>
+          <p id="birthdayMessage"></p>
+        </div>
+
+        <figure id="photoFrame" class="photo-frame hidden">
+          <img id="memoryPhoto" alt="Foto escolhida para a surpresa" />
+        </figure>
+      </section>
+    </main>
+
+    <div
+      id="resultModal"
+      class="result-modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="resultTitle"
+    >
+      <div class="result-backdrop"></div>
+      <section class="result-panel">
+        <span class="pill">Resultado oficial</span>
+        <h2 id="resultTitle">Nao foi dessa vez...</h2>
+        <p id="resultText">
+          A roleta decidiu testar o senso de humor antes de entregar o premio real.
+        </p>
+        <button id="revealButton" class="secondary-button" type="button">
+          Revelar o premio de verdade
+        </button>
+      </section>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
