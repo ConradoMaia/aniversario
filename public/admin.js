@@ -7,11 +7,12 @@
     this.clearImageButton = document.getElementById("clearImageButton");
     this.statusText = document.getElementById("statusText");
     this.previewMessage = document.getElementById("previewMessage");
-    this.previewFrame = document.getElementById("previewFrame");
-    this.previewPhoto = document.getElementById("previewPhoto");
+    this.previewMural = document.getElementById("previewMural");
+    this.previewGallery = document.getElementById("previewGallery");
     this.heartsContainer = document.querySelector(".floating-hearts");
 
-    this.imageDataUrl = "";
+    this.maxImageCount = 8;
+    this.imageDataUrls = [];
 
     this.init();
   }
@@ -27,7 +28,8 @@
     this.form.addEventListener("submit", (event) => this.saveContent(event));
     this.messageInput.addEventListener("input", () => this.updatePreview());
     this.imageInput.addEventListener("change", (event) => this.handleImageSelection(event));
-    this.clearImageButton.addEventListener("click", () => this.clearImage());
+    this.clearImageButton.addEventListener("click", () => this.clearImages());
+    this.previewGallery.addEventListener("click", (event) => this.handleGalleryClick(event));
   }
 
   spawnFloatingScene() {
@@ -59,14 +61,14 @@
 
     this.spawnFloatingGroup({
       count: 2,
-      html: this.getDachshundSvgMarkup(),
+      text: "🐕",
       className: "float-dachshund",
-      sizeMin: 28,
-      sizeRange: 10,
+      sizeMin: 24,
+      sizeRange: 12,
       durationMin: 12,
       durationRange: 4,
       driftRange: 38,
-      scaleX: 1,
+      scaleX: 1.4,
       scaleY: 1
     });
   }
@@ -75,11 +77,7 @@
     for (let index = 0; index < config.count; index += 1) {
       const item = document.createElement("span");
       item.className = `floating-item ${config.className}`;
-      if (config.html) {
-        item.innerHTML = config.html;
-      } else {
-        item.textContent = config.text;
-      }
+      item.textContent = config.text;
       item.style.setProperty("--left", `${Math.random() * 100}%`);
       item.style.setProperty("--size", `${config.sizeMin + Math.random() * config.sizeRange}px`);
       item.style.setProperty("--duration", `${config.durationMin + Math.random() * config.durationRange}s`);
@@ -92,6 +90,18 @@
     }
   }
 
+  normalizeImageDataUrls(content) {
+    if (Array.isArray(content.imageDataUrls)) {
+      return content.imageDataUrls.filter((item) => typeof item === "string" && item.trim());
+    }
+
+    if (typeof content.imageDataUrl === "string" && content.imageDataUrl.trim()) {
+      return [content.imageDataUrl.trim()];
+    }
+
+    return [];
+  }
+
   async loadContent() {
     try {
       const response = await fetch("/api/content", { cache: "no-store" });
@@ -102,7 +112,7 @@
 
       const content = await response.json();
       this.messageInput.value = content.message || "";
-      this.imageDataUrl = content.imageDataUrl || "";
+      this.imageDataUrls = this.normalizeImageDataUrls(content);
       this.setStatus("Conteudo carregado. Edite o que quiser e salve.");
     } catch (error) {
       this.setStatus(error.message, true);
@@ -110,32 +120,60 @@
   }
 
   async handleImageSelection(event) {
-    const [file] = event.target.files || [];
+    const files = Array.from(event.target.files || []);
 
-    if (!file) {
+    if (!files.length) {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      this.setStatus("Escolha uma imagem menor que 5 MB.", true);
+    if (this.imageDataUrls.length + files.length > this.maxImageCount) {
+      this.setStatus(`Voce pode manter no maximo ${this.maxImageCount} fotos no mural.`, true);
+      this.imageInput.value = "";
+      return;
+    }
+
+    const oversizedFile = files.find((file) => file.size > 5 * 1024 * 1024);
+
+    if (oversizedFile) {
+      this.setStatus(`A foto ${oversizedFile.name} passou de 5 MB.`, true);
       this.imageInput.value = "";
       return;
     }
 
     try {
-      this.imageDataUrl = await this.readFileAsDataUrl(file);
-      this.setStatus("Imagem carregada no preview. Falta salvar.");
+      const dataUrls = await Promise.all(files.map((file) => this.readFileAsDataUrl(file)));
+      this.imageDataUrls = [...this.imageDataUrls, ...dataUrls];
+      this.imageInput.value = "";
       this.updatePreview();
+      this.setStatus(`${files.length} foto(s) adicionada(s) ao preview. Falta salvar.`);
     } catch (error) {
-      this.setStatus("Nao foi possivel ler a imagem.", true);
+      this.setStatus("Nao foi possivel ler uma das imagens.", true);
     }
   }
 
-  clearImage() {
-    this.imageDataUrl = "";
-    this.imageInput.value = "";
+  handleGalleryClick(event) {
+    const button = event.target.closest("[data-remove-index]");
+
+    if (!button) {
+      return;
+    }
+
+    const index = Number(button.dataset.removeIndex);
+
+    if (!Number.isInteger(index)) {
+      return;
+    }
+
+    this.imageDataUrls = this.imageDataUrls.filter((_, cursor) => cursor !== index);
     this.updatePreview();
     this.setStatus("Foto removida do preview. Salve para aplicar.");
+  }
+
+  clearImages() {
+    this.imageDataUrls = [];
+    this.imageInput.value = "";
+    this.updatePreview();
+    this.setStatus("Todas as fotos foram removidas do preview. Salve para aplicar.");
   }
 
   readFileAsDataUrl(file) {
@@ -162,7 +200,7 @@
         },
         body: JSON.stringify({
           message: this.messageInput.value,
-          imageDataUrl: this.imageDataUrl
+          imageDataUrls: this.imageDataUrls
         })
       });
 
@@ -173,7 +211,7 @@
       }
 
       this.messageInput.value = payload.message || "";
-      this.imageDataUrl = payload.imageDataUrl || "";
+      this.imageDataUrls = this.normalizeImageDataUrls(payload);
       this.updatePreview();
       this.setStatus("Surpresa salva com sucesso.");
     } catch (error) {
@@ -190,14 +228,37 @@
       "A sua mensagem vai aparecer aqui assim que voce escrever alguma coisa.";
 
     this.previewMessage.innerHTML = this.formatText(previewText);
+    this.renderPreviewGallery();
+  }
 
-    if (this.imageDataUrl) {
-      this.previewPhoto.src = this.imageDataUrl;
-      this.previewFrame.classList.remove("hidden");
-    } else {
-      this.previewPhoto.removeAttribute("src");
-      this.previewFrame.classList.add("hidden");
+  renderPreviewGallery() {
+    this.previewGallery.innerHTML = "";
+
+    if (!this.imageDataUrls.length) {
+      this.previewMural.classList.add("hidden");
+      return;
     }
+
+    this.imageDataUrls.forEach((imageDataUrl, index) => {
+      const card = document.createElement("figure");
+      card.className = "photo-card admin-photo-card";
+
+      const image = document.createElement("img");
+      image.src = imageDataUrl;
+      image.alt = `Preview da foto ${index + 1}`;
+
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "remove-photo-button";
+      removeButton.dataset.removeIndex = String(index);
+      removeButton.textContent = "Remover";
+
+      card.appendChild(image);
+      card.appendChild(removeButton);
+      this.previewGallery.appendChild(card);
+    });
+
+    this.previewMural.classList.remove("hidden");
   }
 
   setStatus(message, isError = false) {
@@ -217,4 +278,3 @@
 }
 
 new SurpriseAdminPage();
-

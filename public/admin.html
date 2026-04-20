@@ -14,7 +14,7 @@
         <p class="eyebrow">Painel rapido</p>
         <h1>Editar a surpresa</h1>
         <p class="lead">
-          Atualize a mensagem final e a foto pelo celular, salve e depois abra a surpresa.
+          Atualize a mensagem final e as fotos pelo celular, salve e depois abra a surpresa.
         </p>
 
         <form id="adminForm" class="admin-form">
@@ -26,16 +26,20 @@
             placeholder="Escreva aqui a mensagem que vai aparecer no final."
           ></textarea>
 
-          <label class="field-label" for="imageInput">Foto da surpresa</label>
+          <label class="field-label" for="imageInput">Fotos do mural</label>
           <input
             id="imageInput"
             type="file"
             accept="image/png,image/jpeg,image/webp,image/gif"
+            multiple
           />
+          <p class="field-help">
+            Voce pode selecionar varias fotos de uma vez e adicionar mais depois. Maximo de 8 fotos.
+          </p>
 
           <div class="admin-actions">
             <button id="saveButton" class="primary-button" type="submit">Salvar surpresa</button>
-            <button id="clearImageButton" class="ghost-button" type="button">Remover foto</button>
+            <button id="clearImageButton" class="ghost-button" type="button">Remover fotos</button>
           </div>
 
           <p id="statusText" class="status-text">Carregando conteudo atual...</p>
@@ -51,9 +55,12 @@
           <p id="previewMessage"></p>
         </div>
 
-        <figure id="previewFrame" class="photo-frame hidden">
-          <img id="previewPhoto" alt="Preview da foto da surpresa" />
-        </figure>
+        <section id="previewMural" class="photo-mural hidden">
+          <div class="mural-header">
+            <h3>Mural de fotos</h3>
+          </div>
+          <div id="previewGallery" class="photo-gallery admin-gallery"></div>
+        </section>
 
         <div class="admin-links">
           <a class="secondary-link" href="/">Abrir surpresa</a>

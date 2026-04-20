@@ -4,16 +4,20 @@ const path = require("path");
 
 const HOST = "0.0.0.0";
 const PORT = Number(process.env.PORT || 3000);
-const MAX_BODY_SIZE = 8 * 1024 * 1024;
+const MAX_BODY_SIZE = 50 * 1024 * 1024;
+const MAX_IMAGE_COUNT = 8;
+const MAX_IMAGE_LENGTH = 7_500_000;
+const MAX_TOTAL_IMAGE_LENGTH = 45_000_000;
 
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
-const DATA_DIR = path.join(ROOT_DIR, "data");
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT_DIR, "data");
 const CONTENT_FILE = path.join(DATA_DIR, "content.json");
 
 const DEFAULT_CONTENT = {
   message:
     "Feliz aniversario, meu amor. Que o seu novo ciclo venha leve, divertido e cheio de coisas bonitas. Obrigado por deixar a vida mais carinhosa, mais engracada e muito mais especial.",
+  imageDataUrls: [],
   imageDataUrl: "",
   updatedAt: new Date().toISOString()
 };
@@ -41,24 +45,43 @@ function ensureDataFile() {
   }
 }
 
+function normalizeImageDataUrls(content) {
+  if (Array.isArray(content.imageDataUrls)) {
+    return content.imageDataUrls.filter((item) => typeof item === "string" && item.trim());
+  }
+
+  if (typeof content.imageDataUrl === "string" && content.imageDataUrl.trim()) {
+    return [content.imageDataUrl.trim()];
+  }
+
+  return [];
+}
+
+function normalizeContent(content) {
+  const imageDataUrls = normalizeImageDataUrls(content);
+
+  return {
+    ...DEFAULT_CONTENT,
+    ...content,
+    imageDataUrls,
+    imageDataUrl: imageDataUrls[0] || ""
+  };
+}
+
 function readContent() {
   try {
     const raw = fs.readFileSync(CONTENT_FILE, "utf8");
     const parsed = JSON.parse(raw);
-
-    return {
-      ...DEFAULT_CONTENT,
-      ...parsed
-    };
+    return normalizeContent(parsed);
   } catch (error) {
     return writeContent(DEFAULT_CONTENT);
   }
 }
 
 function writeContent(content) {
+  const normalized = normalizeContent(content);
   const nextContent = {
-    ...DEFAULT_CONTENT,
-    ...content,
+    ...normalized,
     updatedAt: new Date().toISOString()
   };
 
@@ -166,31 +189,45 @@ function parseRequestBody(request) {
   });
 }
 
+function validateImageDataUrl(imageDataUrl) {
+  if (!/^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(imageDataUrl)) {
+    throw new Error("Formato de imagem nao suportado.");
+  }
+
+  if (imageDataUrl.length > MAX_IMAGE_LENGTH) {
+    throw new Error("Uma das imagens ficou grande demais.");
+  }
+}
+
 function sanitizeContent(payload) {
   const message =
     typeof payload.message === "string" && payload.message.trim()
       ? payload.message.trim()
       : DEFAULT_CONTENT.message;
-  const imageDataUrl = typeof payload.imageDataUrl === "string" ? payload.imageDataUrl : "";
+  const imageDataUrls = normalizeImageDataUrls(payload);
 
   if (message.length > 5000) {
     throw new Error("A mensagem ficou grande demais.");
   }
 
-  if (
-    imageDataUrl &&
-    !/^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(imageDataUrl)
-  ) {
-    throw new Error("Formato de imagem nao suportado.");
+  if (imageDataUrls.length > MAX_IMAGE_COUNT) {
+    throw new Error(`Voce pode salvar no maximo ${MAX_IMAGE_COUNT} fotos.`);
   }
 
-  if (imageDataUrl.length > 7500000) {
-    throw new Error("A imagem ficou grande demais.");
+  let totalImageLength = 0;
+
+  imageDataUrls.forEach((imageDataUrl) => {
+    validateImageDataUrl(imageDataUrl);
+    totalImageLength += imageDataUrl.length;
+  });
+
+  if (totalImageLength > MAX_TOTAL_IMAGE_LENGTH) {
+    throw new Error("O conjunto de fotos ficou grande demais.");
   }
 
   return {
     message,
-    imageDataUrl
+    imageDataUrls
   };
 }
 

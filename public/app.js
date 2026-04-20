@@ -10,8 +10,8 @@
     this.revealButton = document.getElementById("revealButton");
     this.prizeCard = document.getElementById("prizeCard");
     this.birthdayMessage = document.getElementById("birthdayMessage");
-    this.photoFrame = document.getElementById("photoFrame");
-    this.memoryPhoto = document.getElementById("memoryPhoto");
+    this.photoMural = document.getElementById("photoMural");
+    this.photoGallery = document.getElementById("photoGallery");
     this.heartsContainer = document.querySelector(".floating-hearts");
 
     this.isSpinning = false;
@@ -20,7 +20,7 @@
     this.content = {
       message:
         "Feliz aniversario, meu amor. Que o seu novo ciclo venha leve, divertido e cheio de coisas bonitas.",
-      imageDataUrl: ""
+      imageDataUrls: []
     };
 
     this.segments = [
@@ -83,14 +83,14 @@
 
     this.spawnFloatingGroup({
       count: 4,
-      html: this.getDachshundSvgMarkup(),
+      text: "🐕",
       className: "float-dachshund",
-      sizeMin: 30,
-      sizeRange: 14,
+      sizeMin: 26,
+      sizeRange: 16,
       durationMin: 12,
       durationRange: 5,
       driftRange: 44,
-      scaleX: 1,
+      scaleX: 1.45,
       scaleY: 1
     });
   }
@@ -99,11 +99,7 @@
     for (let index = 0; index < config.count; index += 1) {
       const item = document.createElement("span");
       item.className = `floating-item ${config.className}`;
-      if (config.html) {
-        item.innerHTML = config.html;
-      } else {
-        item.textContent = config.text;
-      }
+      item.textContent = config.text;
       item.style.setProperty("--left", `${Math.random() * 100}%`);
       item.style.setProperty("--size", `${config.sizeMin + Math.random() * config.sizeRange}px`);
       item.style.setProperty("--duration", `${config.durationMin + Math.random() * config.durationRange}s`);
@@ -124,11 +120,27 @@
         throw new Error("Nao foi possivel carregar o conteudo.");
       }
 
-      this.content = await response.json();
+      const payload = await response.json();
+      this.content = {
+        ...payload,
+        imageDataUrls: this.normalizeImageDataUrls(payload)
+      };
     } catch (error) {
       this.helperText.textContent =
         "A surpresa abre normalmente, mas o conteudo editavel nao foi carregado.";
     }
+  }
+
+  normalizeImageDataUrls(content) {
+    if (Array.isArray(content.imageDataUrls)) {
+      return content.imageDataUrls.filter((item) => typeof item === "string" && item.trim());
+    }
+
+    if (typeof content.imageDataUrl === "string" && content.imageDataUrl.trim()) {
+      return [content.imageDataUrl.trim()];
+    }
+
+    return [];
   }
 
   resizeCanvas() {
@@ -316,19 +328,18 @@
     this.hasSpun = true;
     this.highlightedSegmentIndex = this.losingIndex;
     this.drawWheel();
-    this.helperText.textContent = "Pronto... agora ela voltou exatamente para o lugar dela.";
+    this.helperText.textContent = "Pronto... olha bem: ela parou em Nao foi dessa vez.";
     this.wheelStage.classList.remove("loss-hit");
     void this.wheelStage.offsetWidth;
     this.wheelStage.classList.add("loss-hit");
 
     window.setTimeout(() => {
       this.showLossResult();
-    }, 780);
+    }, 3000);
   }
 
   showLossResult() {
     document.body.classList.add("modal-open", "loss-mode");
-
     this.resultTitle.textContent = "Nao foi dessa vez...";
     this.resultText.textContent =
       "A roleta ate ensaiou te dar Casa nova, mas voltou correndo para o lugar dela.";
@@ -350,15 +361,31 @@
   }
 
   updatePrizeContent() {
-    this.birthdayMessage.innerHTML = this.formatText(this.content.message);
+    this.birthdayMessage.innerHTML = this.formatText(this.content.message || "");
+    this.renderPhotoGallery(this.normalizeImageDataUrls(this.content));
+  }
 
-    if (this.content.imageDataUrl) {
-      this.memoryPhoto.src = this.content.imageDataUrl;
-      this.photoFrame.classList.remove("hidden");
-    } else {
-      this.memoryPhoto.removeAttribute("src");
-      this.photoFrame.classList.add("hidden");
+  renderPhotoGallery(imageDataUrls) {
+    this.photoGallery.innerHTML = "";
+
+    if (!imageDataUrls.length) {
+      this.photoMural.classList.add("hidden");
+      return;
     }
+
+    imageDataUrls.forEach((imageDataUrl, index) => {
+      const card = document.createElement("figure");
+      card.className = "photo-card";
+
+      const image = document.createElement("img");
+      image.src = imageDataUrl;
+      image.alt = `Foto ${index + 1} da surpresa`;
+
+      card.appendChild(image);
+      this.photoGallery.appendChild(card);
+    });
+
+    this.photoMural.classList.remove("hidden");
   }
 
   formatText(text) {
@@ -373,5 +400,3 @@
 }
 
 new BirthdayRouletteApp();
-
-
